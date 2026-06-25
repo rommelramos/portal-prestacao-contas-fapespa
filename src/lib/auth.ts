@@ -23,9 +23,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase().trim() },
-        });
+
+        let user;
+        try {
+          user = await prisma.user.findUnique({
+            where: { email: email.toLowerCase().trim() },
+          });
+        } catch (err) {
+          // Falha de conexão com o banco — não é credencial inválida.
+          // Relança para que a UI mostre mensagem distinta de erro do sistema.
+          console.error("[auth] Erro ao acessar o banco:", err);
+          throw new Error("DB_UNAVAILABLE");
+        }
 
         if (!user || !user.active) return null;
 
