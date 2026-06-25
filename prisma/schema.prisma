@@ -1,0 +1,197 @@
+// Portal de Prestação de Contas FAPESPA — ISACI
+// Schema MySQL (HostGator). Documentação: ver README.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+enum DocumentType {
+  ORIENTACAO
+  NORMA
+  RESOLUCAO
+  COMUNICADO
+  OUTRO
+}
+
+/// Usuários do sistema (administradores e usuários finais).
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  chatSessions ChatSession[]
+  auditLogs    AuditLog[]
+
+  @@index([role])
+  @@index([active])
+}
+
+/// Financiadores (FAPESPA e demais entidades de fomento).
+model Funder {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?  @db.Text
+  institutionalInfo String?  @db.Text
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  manuals      Manual[]
+  documents    Document[]
+  chatSessions ChatSession[]
+  chunks       KnowledgeChunk[]
+
+  @@index([active])
+  @@index([name])
+}
+
+/// Manual de prestação de contas de um financiador (agrupa versões).
+model Manual {
+  id        String   @id @default(cuid())
+  funderId  String
+  title     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  funder   Funder          @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  versions ManualVersion[]
+
+  @@index([funderId])
+}
+
+/// Versão específica de um manual, com arquivo e texto extraído para a IA.
+model ManualVersion {
+  id            String    @id @default(cuid())
+  manualId      String
+  version       String
+  effectiveDate DateTime?
+  fileUrl       String?   @db.Text
+  fileName      String?
+  extractedText String?   @db.LongText
+  indexed       Boolean   @default(false)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  manual       Manual           @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  chatSessions ChatSession[]
+  chunks       KnowledgeChunk[]
+
+  @@index([manualId])
+  @@index([active])
+}
+
+/// Documentos complementares (normas, resoluções, comunicados etc.).
+model Document {
+  id            String       @id @default(cuid())
+  funderId      String
+  title         String
+  type          DocumentType @default(OUTRO)
+  fileUrl       String?      @db.Text
+  fileName      String?
+  extractedText String?      @db.LongText
+  indexed       Boolean      @default(false)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  funder Funder           @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  chunks KnowledgeChunk[]
+
+  @@index([funderId])
+  @@index([active])
+}
+
+/// Trechos indexados da base de conhecimento (RAG) por financiador/versão.
+model KnowledgeChunk {
+  id              String   @id @default(cuid())
+  funderId        String
+  manualVersionId String?
+  documentId      String?
+  ordinal         Int      @default(0)
+  content         String   @db.LongText
+  reference       String?  @db.Text
+  embedding       String?  @db.LongText
+  createdAt       DateTime @default(now())
+
+  funder        Funder         @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  manualVersion ManualVersion? @relation(fields: [manualVersionId], references: [id], onDelete: Cascade)
+  document      Document?      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([funderId])
+  @@index([manualVersionId])
+  @@index([documentId])
+  @@fulltext([content])
+}
+
+/// Sessão de conversa do usuário com o chatbot (isolada por financiador/versão).
+model ChatSession {
+  id              String   @id @default(cuid())
+  userId          String
+  funderId        String
+  manualVersionId String?
+  title           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  funder        Funder         @relation(fields: [funderId], references: [id])
+  manualVersion ManualVersion? @relation(fields: [manualVersionId], references: [id])
+  messages      ChatMessage[]
+
+  @@index([userId])
+  @@index([funderId])
+  @@index([createdAt])
+}
+
+/// Mensagens individuais de uma sessão de chat.
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      MessageRole
+  content   String      @db.LongText
+  citations String?     @db.LongText
+  createdAt DateTime    @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+/// Log de auditoria de ações administrativas relevantes (RNF009).
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
