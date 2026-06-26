@@ -20,8 +20,10 @@ export default async function UserLayout({
             PC
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold">Portal de Prestação de Contas</p>
-            <p className="text-xs text-muted">FAPESPA · ISACI</p>
+            <p className="text-sm font-semibold leading-tight">
+              Portal de Manuais de Prestação de Contas
+            </p>
+            <p className="text-xs text-muted">ISACI</p>
           </div>
         </Link>
         <nav className="flex items-center gap-4">

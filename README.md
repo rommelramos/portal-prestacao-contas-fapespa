@@ -1,4 +1,4 @@
-# Portal de Prestação de Contas — FAPESPA / ISACI
+# Portal de Manuais de Prestação de Contas — ISACI
 
 Portal web com **chatbot de IA (Claude)** para consulta das regras, normas e
 manuais de prestação de contas de múltiplos financiadores de projetos de

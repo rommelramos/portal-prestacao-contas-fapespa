@@ -28,7 +28,9 @@ export default async function AdminLayout({
             PC
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold">Portal FAPESPA</p>
+            <p className="text-sm font-semibold leading-tight">
+              Portal de Manuais de Prestação de Contas
+            </p>
             <p className="text-xs text-muted">Administração</p>
           </div>
         </div>
@@ -47,7 +49,9 @@ export default async function AdminLayout({
 
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
-          <p className="text-sm text-muted md:hidden">Portal FAPESPA · Admin</p>
+          <p className="text-sm text-muted md:hidden">
+            Portal de Manuais de Prestação de Contas · Admin
+          </p>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-sm text-muted">{session.user.name}</span>
             <SignOutButton />

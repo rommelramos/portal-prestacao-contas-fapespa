@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Portal de Prestação de Contas — FAPESPA / ISACI",
+  title: "Portal de Manuais de Prestação de Contas — ISACI",
   description:
     "Consulte regras e manuais de prestação de contas dos financiadores com apoio de IA.",
 };

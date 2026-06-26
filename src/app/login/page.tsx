@@ -17,9 +17,9 @@ export default function LoginPage() {
             PC
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Portal de Prestação de Contas
+            Portal de Manuais de Prestação de Contas
           </h1>
-          <p className="mt-1 text-sm text-muted">FAPESPA · ISACI</p>
+          <p className="mt-1 text-sm text-muted">ISACI</p>
         </div>
 
         <form
