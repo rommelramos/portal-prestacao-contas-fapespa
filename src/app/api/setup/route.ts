@@ -55,10 +55,11 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
     await prisma.user.upsert({
       where: { email },
-      update: {},
+      // Atualiza a senha/estado de forma determinística (idempotente).
+      update: { passwordHash, name, role: "ADMIN", active: true },
       create: { name, email, passwordHash, role: "ADMIN", active: true },
     });
-    adminMsg = `Admin garantido: ${email}`;
+    adminMsg = `Admin garantido (senha redefinida): ${email}`;
   } catch (err) {
     adminMsg = `Falha ao criar admin: ${(err as Error)?.message?.slice(0, 160)}`;
   }
