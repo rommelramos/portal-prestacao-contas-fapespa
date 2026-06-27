@@ -24,9 +24,6 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    const start = Date.now ? 0 : 0; // Date.now permitido aqui (runtime app)
-    void start;
-
     const { answer, refusal } = await answerWithContext({
       funderName: "FAPESPA",
       manualLabel: "Manual de Prestação de Contas — versão 2025.1",
