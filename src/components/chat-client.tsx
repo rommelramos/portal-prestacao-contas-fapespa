@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { Markdown } from "@/components/markdown";
 
 type Funder = { id: string; name: string };
 type VersionRef = { id: string; version: string; manualTitle: string };
@@ -210,7 +211,11 @@ export function ChatClient({
                   : "max-w-[90%] rounded-2xl border border-border bg-card px-4 py-3 text-sm"
               }
             >
-              <p className="whitespace-pre-wrap">{m.content}</p>
+              {m.role === "assistant" ? (
+                <Markdown>{m.content}</Markdown>
+              ) : (
+                <p className="whitespace-pre-wrap">{m.content}</p>
+              )}
               {m.role === "assistant" && m.citations && m.citations.length > 0 && (
                 <div className="mt-3 border-t border-border pt-2">
                   <p className="text-xs font-medium text-muted">

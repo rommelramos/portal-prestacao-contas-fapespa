@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Markdown } from "@/components/markdown";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,11 @@ export default async function ConsultaPage({
                     : "max-w-[90%] rounded-2xl border border-border bg-card px-4 py-3 text-sm"
                 }
               >
-                <p className="whitespace-pre-wrap">{m.content}</p>
+                {m.role === "ASSISTANT" ? (
+                  <Markdown>{m.content}</Markdown>
+                ) : (
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                )}
                 {citations.length > 0 && (
                   <div className="mt-3 border-t border-border pt-2">
                     <p className="text-xs font-medium text-muted">
