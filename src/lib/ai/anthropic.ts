@@ -86,3 +86,72 @@ export async function answerWithContext(params: {
 
   return { answer: answer || "Não consegui gerar uma resposta.", refusal: false };
 }
+
+function parecerSystem(funderName: string, manualLabel: string): string {
+  return [
+    `Você é um parecerista técnico especializado em prestação de contas de projetos de pesquisa e inovação.`,
+    `Elabore um PARECER TÉCNICO formal sobre a consulta apresentada, fundamentado EXCLUSIVAMENTE nas regras do financiador "${funderName}"${manualLabel ? ` (${manualLabel})` : ""}, com base SOMENTE nos trechos de contexto fornecidos.`,
+    ``,
+    `REGRAS OBRIGATÓRIAS:`,
+    `1. Use SOMENTE os trechos fornecidos. NÃO use conhecimento externo e NÃO invente regras.`,
+    `2. Em CADA fundamentação, aponte exatamente a origem no formato [fonte: <referência>] (incluindo a página), usando as referências dos trechos.`,
+    `3. Se não houver base suficiente nos trechos para uma conclusão segura, declare isso expressamente em vez de especular.`,
+    `4. As conclusões têm caráter orientativo, não vinculante.`,
+    ``,
+    `ESTRUTURE o parecer em markdown EXATAMENTE com estas seções:`,
+    `## 1. Da Consulta`,
+    `(Resuma objetivamente a questão consultada.)`,
+    `## 2. Da Fundamentação`,
+    `(Analise à luz das regras, citando a fonte de cada ponto: [fonte: ..., p. X].)`,
+    `## 3. Da Conclusão`,
+    `(Conclua de forma objetiva — ex.: permitido / vedado / permitido com condições — indicando as condições e a(s) fonte(s).)`,
+    ``,
+    `Seja formal, claro e conciso. Não inclua cabeçalho/rodapé nem assinatura — isso é adicionado pelo sistema.`,
+  ].join("\n");
+}
+
+/** Gera um parecer técnico formal a partir da consulta, ancorado nos trechos. */
+export async function generateParecer(params: {
+  funderName: string;
+  manualLabel: string;
+  chunks: RetrievedChunk[];
+  conversation: ChatTurn[];
+}): Promise<AnswerResult> {
+  const consulta = params.conversation
+    .map((t) => `${t.role === "user" ? "Consulente" : "Assistente"}: ${t.content}`)
+    .join("\n");
+
+  const userContent = [
+    `CONTEXTO (trechos dos documentos do financiador):`,
+    ``,
+    buildContext(params.chunks),
+    ``,
+    `---`,
+    `CONSULTA REALIZADA (histórico da conversa):`,
+    consulta,
+    ``,
+    `---`,
+    `Elabore o parecer técnico conforme as instruções do sistema.`,
+  ].join("\n");
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 3500,
+    thinking: { type: "adaptive" },
+    output_config: { effort: "medium" },
+    system: parecerSystem(params.funderName, params.manualLabel),
+    messages: [{ role: "user", content: userContent }],
+  });
+
+  if (response.stop_reason === "refusal") {
+    return { answer: "Não foi possível gerar o parecer.", refusal: true };
+  }
+
+  const answer = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("")
+    .trim();
+
+  return { answer: answer || "Não foi possível gerar o parecer.", refusal: false };
+}

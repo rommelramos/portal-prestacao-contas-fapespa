@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Markdown } from "@/components/markdown";
+import { ParecerButton } from "@/components/parecer-button";
 
 export const dynamic = "force-dynamic";
 
@@ -43,16 +44,19 @@ export default async function ConsultaPage({
       <Link href="/app/historico" className="text-sm text-muted hover:underline">
         ← Histórico
       </Link>
-      <div className="mb-4 mt-1">
-        <h1 className="text-xl font-semibold tracking-tight">
-          {chat.title ?? "Consulta"}
-        </h1>
-        <p className="text-sm text-muted">
-          {chat.funder.name}
-          {chat.manualVersion
-            ? ` · ${chat.manualVersion.manual.title} v. ${chat.manualVersion.version}`
-            : " · todos os documentos"}
-        </p>
+      <div className="mb-4 mt-1 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {chat.title ?? "Consulta"}
+          </h1>
+          <p className="text-sm text-muted">
+            {chat.funder.name}
+            {chat.manualVersion
+              ? ` · ${chat.manualVersion.manual.title} v. ${chat.manualVersion.version}`
+              : " · todos os documentos"}
+          </p>
+        </div>
+        <ParecerButton sessionId={chat.id} />
       </div>
 
       <div className="space-y-4">

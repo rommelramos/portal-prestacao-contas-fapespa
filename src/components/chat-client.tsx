@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { Markdown } from "@/components/markdown";
+import { ParecerButton } from "@/components/parecer-button";
 
 type Funder = { id: string; name: string };
 type VersionRef = { id: string; version: string; manualTitle: string };
@@ -183,12 +184,17 @@ export function ChatClient({
               : "todos os documentos"}
           </span>
         </div>
-        <button
-          onClick={reset}
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium transition hover:bg-accent"
-        >
-          Nova consulta
-        </button>
+        <div className="flex items-center gap-2">
+          {sessionId && messages.some((m) => m.role === "assistant") && (
+            <ParecerButton sessionId={sessionId} />
+          )}
+          <button
+            onClick={reset}
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium transition hover:bg-accent"
+          >
+            Nova consulta
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 space-y-4">
