@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ConfirmSubmit } from "@/components/confirm-submit";
+import { ReindexButton } from "@/components/reindex-button";
 import {
   toggleManualVersionActive,
   deleteManualVersion,
@@ -187,6 +188,7 @@ export default async function ManuaisPage({
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex items-center justify-end gap-2">
+                          <ReindexButton kind="manual" id={v.id} />
                           <form action={toggleManualVersionActive}>
                             <input type="hidden" name="id" value={v.id} />
                             <button className="rounded-lg border border-border px-2.5 py-1 text-xs transition hover:bg-accent">
@@ -269,6 +271,7 @@ export default async function ManuaisPage({
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex items-center justify-end gap-2">
+                        <ReindexButton kind="documento" id={d.id} />
                         <form action={toggleDocumentActive}>
                           <input type="hidden" name="id" value={d.id} />
                           <button className="rounded-lg border border-border px-2.5 py-1 text-xs transition hover:bg-accent">
