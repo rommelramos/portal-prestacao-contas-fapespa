@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { IngestForm } from "@/components/ingest-form";
+import { getExistingByFunder } from "@/lib/admin-data";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function NovoDocumentoPage({
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
+
+  const existingByFunder = await getExistingByFunder();
 
   return (
     <div className="space-y-6">
@@ -39,7 +42,12 @@ export default async function NovoDocumentoPage({
           </Link>
         </p>
       ) : (
-        <IngestForm kind="documento" funders={funders} defaultFunderId={funderId} />
+        <IngestForm
+          kind="documento"
+          funders={funders}
+          defaultFunderId={funderId}
+          existingByFunder={existingByFunder}
+        />
       )}
     </div>
   );

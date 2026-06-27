@@ -6,6 +6,12 @@ import Link from "next/link";
 
 type Funder = { id: string; name: string };
 type ManualRef = { id: string; title: string };
+type ExistingItem = {
+  kind: "manual" | "documento";
+  label: string;
+  indexed: boolean;
+  chunks: number;
+};
 
 const DOC_TYPES = [
   { value: "NORMA", label: "Norma" },
@@ -20,11 +26,13 @@ export function IngestForm({
   funders,
   defaultFunderId,
   manualsByFunder = {},
+  existingByFunder = {},
 }: {
   kind: "manual" | "documento";
   funders: Funder[];
   defaultFunderId?: string;
   manualsByFunder?: Record<string, ManualRef[]>;
+  existingByFunder?: Record<string, ExistingItem[]>;
 }) {
   const router = useRouter();
   const [funderId, setFunderId] = useState(defaultFunderId ?? funders[0]?.id ?? "");
@@ -36,6 +44,10 @@ export function IngestForm({
   const manualsOfFunder = useMemo(
     () => manualsByFunder[funderId] ?? [],
     [manualsByFunder, funderId],
+  );
+  const existingOfFunder = useMemo(
+    () => existingByFunder[funderId] ?? [],
+    [existingByFunder, funderId],
   );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -95,6 +107,44 @@ export function IngestForm({
           O conteúdo será indexado isoladamente na base deste financiador.
         </p>
       </div>
+
+      {funderId && (
+        <div className="rounded-xl border border-border bg-accent/30 p-4">
+          <p className="text-sm font-medium">
+            Documentos já cadastrados deste financiador
+          </p>
+          {existingOfFunder.length === 0 ? (
+            <p className="mt-2 text-xs text-muted">
+              Nenhum documento cadastrado ainda.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {existingOfFunder.map((it, i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="rounded bg-card px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted">
+                      {it.kind === "manual" ? "Manual" : "Legislação"}
+                    </span>
+                    <span className="text-foreground">{it.label}</span>
+                  </span>
+                  {it.indexed ? (
+                    <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                      ● indexado · {it.chunks} trechos
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      ● apenas salvo (não indexado)
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {kind === "manual" && (
         <>

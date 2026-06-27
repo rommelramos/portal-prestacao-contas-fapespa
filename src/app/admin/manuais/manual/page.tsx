@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { IngestForm } from "@/components/ingest-form";
+import { getExistingByFunder } from "@/lib/admin-data";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export default async function NovoManualPage({
   for (const m of manuals) {
     (manualsByFunder[m.funderId] ??= []).push({ id: m.id, title: m.title });
   }
+
+  const existingByFunder = await getExistingByFunder();
 
   return (
     <div className="space-y-6">
@@ -54,6 +57,7 @@ export default async function NovoManualPage({
           funders={funders}
           defaultFunderId={funderId}
           manualsByFunder={manualsByFunder}
+          existingByFunder={existingByFunder}
         />
       )}
     </div>
