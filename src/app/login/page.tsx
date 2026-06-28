@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useEffect, useState } from "react";
 import { authenticate, type LoginState } from "@/lib/actions/auth";
 
 export default function LoginPage() {
@@ -8,6 +9,13 @@ export default function LoginPage() {
     authenticate,
     undefined,
   );
+  const [resetOk, setResetOk] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("reset") === "ok") {
+      setResetOk(true);
+    }
+  }, []);
 
   return (
     <main className="flex min-h-screen flex-1 items-center justify-center px-4 py-12">
@@ -56,6 +64,12 @@ export default function LoginPage() {
             />
           </div>
 
+          {resetOk && (
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+              Senha redefinida com sucesso. Faça login com a nova senha.
+            </p>
+          )}
+
           {state?.error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-danger">
               {state.error}
@@ -69,6 +83,12 @@ export default function LoginPage() {
           >
             {pending ? "Entrando…" : "Entrar"}
           </button>
+
+          <p className="text-center text-sm">
+            <Link href="/recuperar-senha" className="text-primary hover:underline">
+              Esqueci minha senha
+            </Link>
+          </p>
 
           <p className="text-center text-xs text-muted">
             Acesso restrito a colaboradores autorizados do ISACI.
