@@ -17,7 +17,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   promptBase:
     "Você é um assistente especializado em prestação de contas de projetos de pesquisa e inovação. Responda às dúvidas sobre as regras do financiador selecionado de forma precisa, técnica e orientativa.",
   topK: 8,
-  similarityThreshold: 0,
+  similarityThreshold: 0.2,
 };
 
 export const MODEL_OPTIONS = [
