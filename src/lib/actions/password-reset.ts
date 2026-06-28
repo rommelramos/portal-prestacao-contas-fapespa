@@ -7,6 +7,7 @@ import { hashPassword } from "@/lib/password";
 import { signResetToken, verifyResetToken } from "@/lib/reset-token";
 import { sendEmail } from "@/lib/email";
 import { logAudit } from "@/lib/audit";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export type RequestState = { ok?: boolean; error?: string } | undefined;
 
@@ -18,6 +19,12 @@ export async function requestPasswordReset(
     .toLowerCase()
     .trim();
   if (!email) return { error: "Informe o e-mail." };
+
+  // Anti-spam: no máx. 5 solicitações por IP a cada 15 minutos. Em caso de
+  // bloqueio, responde genericamente (sem enviar e sem revelar o limite).
+  const ip = clientIp(await headers());
+  const rl = await rateLimit(`pwreset:${ip}`, 5, 15 * 60_000);
+  if (!rl.ok) return { ok: true };
 
   const user = await prisma.user.findUnique({ where: { email } });
 

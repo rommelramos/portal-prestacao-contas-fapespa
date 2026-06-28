@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { retrieveChunks } from "@/lib/rag/retrieve";
 import { generateParecer, type ChatTurn } from "@/lib/ai/anthropic";
 import { getSettings } from "@/lib/settings";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 45;
 
@@ -11,6 +12,18 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ ok: false, error: "Não autenticado." }, { status: 401 });
+  }
+
+  // Rate limit: pareceres são pesados — 8 a cada 10 minutos por usuário.
+  const rl = await rateLimit(`parecer:${session.user.id}`, 8, 10 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Limite de geração de pareceres atingido. Aguarde ${Math.ceil(rl.retryAfter / 60)} min.`,
+      },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
   }
 
   let body: { sessionId?: string };

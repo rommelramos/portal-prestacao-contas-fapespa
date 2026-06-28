@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { retrieveChunks } from "@/lib/rag/retrieve";
 import { answerWithContext, type ChatTurn } from "@/lib/ai/anthropic";
 import { getSettings } from "@/lib/settings";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 30;
 
@@ -15,6 +16,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Não autenticado." }, { status: 401 });
   }
   const userId = session.user.id;
+
+  // Rate limit: 20 consultas por minuto por usuário (controle de custo de IA).
+  const rl = await rateLimit(`chat:${userId}`, 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Muitas consultas em sequência. Aguarde ${rl.retryAfter}s e tente novamente.`,
+      },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
 
   let body: {
     sessionId?: string;

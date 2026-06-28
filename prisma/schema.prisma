@@ -179,6 +179,13 @@ model ChatMessage {
   @@index([sessionId])
 }
 
+/// Contador de rate limiting (janela fixa), por chave (ex.: "chat:userId").
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+}
+
 /// Configurações globais da LLM (singleton: id = "global").
 model Setting {
   id                  String   @id @default("global")
