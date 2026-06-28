@@ -13,11 +13,15 @@ const fmt = (d: Date) =>
 export default async function HistoricoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ funderId?: string }>;
+  searchParams: Promise<{ funderId?: string; from?: string; to?: string }>;
 }) {
   const session = await auth();
   const userId = session!.user.id;
-  const { funderId } = await searchParams;
+  const { funderId, from, to } = await searchParams;
+
+  const createdAt: { gte?: Date; lte?: Date } = {};
+  if (from) createdAt.gte = new Date(from + "T00:00:00");
+  if (to) createdAt.lte = new Date(to + "T23:59:59");
 
   const [funders, sessions] = await Promise.all([
     prisma.funder.findMany({
@@ -26,7 +30,11 @@ export default async function HistoricoPage({
       select: { id: true, name: true },
     }),
     prisma.chatSession.findMany({
-      where: { userId, ...(funderId ? { funderId } : {}) },
+      where: {
+        userId,
+        ...(funderId ? { funderId } : {}),
+        ...(from || to ? { createdAt } : {}),
+      },
       orderBy: { updatedAt: "desc" },
       include: {
         funder: { select: { name: true } },
@@ -50,10 +58,10 @@ export default async function HistoricoPage({
       </div>
 
       {funders.length > 0 && (
-        <form method="get" className="mb-4 flex items-end gap-2">
+        <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <label htmlFor="funderId" className="text-xs font-medium text-muted">
-              Filtrar por financiador
+              Financiador
             </label>
             <select
               id="funderId"
@@ -69,9 +77,41 @@ export default async function HistoricoPage({
               ))}
             </select>
           </div>
+          <div className="space-y-1">
+            <label htmlFor="from" className="text-xs font-medium text-muted">
+              De
+            </label>
+            <input
+              id="from"
+              name="from"
+              type="date"
+              defaultValue={from ?? ""}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="to" className="text-xs font-medium text-muted">
+              Até
+            </label>
+            <input
+              id="to"
+              name="to"
+              type="date"
+              defaultValue={to ?? ""}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+            />
+          </div>
           <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-accent">
             Filtrar
           </button>
+          {(funderId || from || to) && (
+            <Link
+              href="/app/historico"
+              className="px-2 py-2 text-sm text-muted underline-offset-2 hover:underline"
+            >
+              Limpar
+            </Link>
+          )}
         </form>
       )}
 
