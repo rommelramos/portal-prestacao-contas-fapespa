@@ -1,4 +1,5 @@
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 type ParecerMeta = {
   funderName: string;
@@ -15,7 +16,10 @@ const esc = (s: string) =>
  * salva como PDF). Mantém o documento isolado da aplicação.
  */
 export function openParecerPrint(parecerMd: string, meta: ParecerMeta): boolean {
-  const body = marked.parse(parecerMd, { async: false }) as string;
+  // Sanitiza o HTML gerado do markdown antes de injetar na janela de impressão,
+  // evitando execução de qualquer HTML/script que tenha vindo do conteúdo.
+  const rawBody = marked.parse(parecerMd, { async: false }) as string;
+  const body = DOMPurify.sanitize(rawBody);
   const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(
     new Date(),
   );
