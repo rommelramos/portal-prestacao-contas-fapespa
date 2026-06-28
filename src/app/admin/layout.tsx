@@ -9,6 +9,7 @@ const NAV = [
   { href: "/admin/manuais", label: "Manuais & Documentos" },
   { href: "/admin/usuarios", label: "Usuários" },
   { href: "/admin/historico", label: "Histórico Global" },
+  { href: "/admin/configuracoes", label: "Configurações da IA" },
 ];
 
 export default async function AdminLayout({

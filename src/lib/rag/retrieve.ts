@@ -37,8 +37,10 @@ export async function retrieveChunks(params: {
   query: string;
   manualVersionId?: string;
   topK?: number;
+  minScore?: number;
 }): Promise<RetrievedChunk[]> {
   const topK = params.topK ?? 8;
+  const minScore = params.minScore ?? 0;
 
   const chunks = await prisma.knowledgeChunk.findMany({
     where: {
@@ -87,5 +89,7 @@ export async function retrieveChunks(params: {
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, topK);
+  // Descarta trechos abaixo do limiar de similaridade (se configurado).
+  const filtered = minScore > 0 ? scored.filter((c) => c.score >= minScore) : scored;
+  return filtered.slice(0, topK);
 }

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { retrieveChunks } from "@/lib/rag/retrieve";
 import { generateParecer, type ChatTurn } from "@/lib/ai/anthropic";
+import { getSettings } from "@/lib/settings";
 
 export const maxDuration = 45;
 
@@ -56,11 +57,13 @@ export async function POST(req: NextRequest) {
     .join(" ");
 
   try {
+    const settings = await getSettings();
     const chunks = await retrieveChunks({
       funderId: chat.funderId,
       query: query || conversation[conversation.length - 1].content,
       manualVersionId: chat.manualVersionId ?? undefined,
-      topK: 12,
+      topK: Math.max(settings.topK, 10),
+      minScore: settings.similarityThreshold,
     });
 
     const { answer } = await generateParecer({
@@ -68,6 +71,7 @@ export async function POST(req: NextRequest) {
       manualLabel,
       chunks,
       conversation,
+      config: settings,
     });
 
     return NextResponse.json({

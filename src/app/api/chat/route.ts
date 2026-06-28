@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { retrieveChunks } from "@/lib/rag/retrieve";
 import { answerWithContext, type ChatTurn } from "@/lib/ai/anthropic";
+import { getSettings } from "@/lib/settings";
 
 export const maxDuration = 30;
 
@@ -93,12 +94,15 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
+    const settings = await getSettings();
+
     // Recupera trechos isolados por financiador (+ versão, se houver).
     const chunks = await retrieveChunks({
       funderId: funder.id,
       query: message,
       manualVersionId: body.manualVersionId,
-      topK: 8,
+      topK: settings.topK,
+      minScore: settings.similarityThreshold,
     });
 
     const { answer } = await answerWithContext({
@@ -107,6 +111,7 @@ export async function POST(req: NextRequest) {
       chunks,
       history,
       question: message,
+      config: settings,
     });
 
     // Fontes consultadas (referências únicas dos trechos recuperados).

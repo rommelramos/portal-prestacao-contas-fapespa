@@ -1,26 +1,48 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { RetrievedChunk } from "@/lib/rag/retrieve";
+import { toneInstruction } from "@/lib/settings";
 
 // Lê ANTHROPIC_API_KEY do ambiente.
 const client = new Anthropic();
 
-const MODEL = "claude-opus-4-8";
+const DEFAULT_MODEL = "claude-opus-4-8";
+
+type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
-function systemPrompt(funderName: string, manualLabel: string): string {
+export type LlmConfig = {
+  model?: string;
+  effort?: string;
+  promptBase?: string;
+  tone?: string;
+};
+
+function systemPrompt(
+  funderName: string,
+  manualLabel: string,
+  cfg: LlmConfig,
+): string {
+  const base =
+    cfg.promptBase?.trim() ||
+    "Você é um assistente especializado em prestação de contas de projetos de pesquisa e inovação.";
   return [
-    `Você é um assistente especializado em prestação de contas de projetos de pesquisa e inovação.`,
+    base,
     `Você está respondendo dúvidas EXCLUSIVAMENTE sobre as regras do financiador "${funderName}"${manualLabel ? ` (${manualLabel})` : ""}.`,
+    toneInstruction(cfg.tone ?? "formal"),
     ``,
-    `REGRAS OBRIGATÓRIAS:`,
+    `REGRAS OBRIGATÓRIAS (não podem ser ignoradas):`,
     `1. Responda SOMENTE com base nos trechos de contexto fornecidos abaixo. NÃO use conhecimento externo, NÃO invente regras e NÃO misture regras de outros financiadores.`,
     `2. Sempre que afirmar uma regra ou conclusão, cite a fonte ao final da frase no formato [fonte: <referência>], usando exatamente as referências dos trechos fornecidos (ex.: [fonte: Manual de Prestação de Contas (v. 2025.1), p. 12]).`,
     `3. Se os trechos NÃO contiverem informação suficiente para responder com segurança, diga claramente: "Não encontrei base suficiente nos documentos cadastrados deste financiador para responder a essa questão." e oriente o usuário a consultar o setor responsável. NUNCA especule.`,
-    `4. Seja objetivo, claro e use linguagem acessível. Quando relevante, aborde compras de materiais e serviços, pagamento de bolsas, diárias, passagens, hospedagem e a forma de comprovação de despesas.`,
-    `5. Não dê aconselhamento jurídico definitivo; suas respostas têm caráter orientativo, baseado nos manuais.`,
+    `4. Não dê aconselhamento jurídico definitivo; suas respostas têm caráter orientativo, baseado nos manuais.`,
   ].join("\n");
 }
+
+const cleanEffort = (e?: string): EffortLevel =>
+  (["low", "medium", "high", "xhigh", "max"].includes(e ?? "")
+    ? e
+    : "low") as EffortLevel;
 
 function buildContext(chunks: RetrievedChunk[]): string {
   if (chunks.length === 0) {
@@ -46,7 +68,9 @@ export async function answerWithContext(params: {
   chunks: RetrievedChunk[];
   history: ChatTurn[];
   question: string;
+  config?: LlmConfig;
 }): Promise<AnswerResult> {
+  const cfg = params.config ?? {};
   const userContent = [
     `CONTEXTO (trechos recuperados dos documentos do financiador):`,
     ``,
@@ -62,11 +86,11 @@ export async function answerWithContext(params: {
   ];
 
   const response = await client.messages.create({
-    model: MODEL,
+    model: cfg.model || DEFAULT_MODEL,
     max_tokens: 2048,
     thinking: { type: "adaptive" },
-    output_config: { effort: "low" },
-    system: systemPrompt(params.funderName, params.manualLabel),
+    output_config: { effort: cleanEffort(cfg.effort) },
+    system: systemPrompt(params.funderName, params.manualLabel, cfg),
     messages,
   });
 
@@ -116,7 +140,9 @@ export async function generateParecer(params: {
   manualLabel: string;
   chunks: RetrievedChunk[];
   conversation: ChatTurn[];
+  config?: LlmConfig;
 }): Promise<AnswerResult> {
+  const cfg = params.config ?? {};
   const consulta = params.conversation
     .map((t) => `${t.role === "user" ? "Consulente" : "Assistente"}: ${t.content}`)
     .join("\n");
@@ -135,10 +161,13 @@ export async function generateParecer(params: {
   ].join("\n");
 
   const response = await client.messages.create({
-    model: MODEL,
+    model: cfg.model || DEFAULT_MODEL,
     max_tokens: 3500,
     thinking: { type: "adaptive" },
-    output_config: { effort: "medium" },
+    // Pareceres raciocinam ao menos no nível "médio".
+    output_config: {
+      effort: cleanEffort(cfg.effort) === "low" ? "medium" : cleanEffort(cfg.effort),
+    },
     system: parecerSystem(params.funderName, params.manualLabel),
     messages: [{ role: "user", content: userContent }],
   });

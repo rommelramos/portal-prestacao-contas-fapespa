@@ -179,6 +179,19 @@ model ChatMessage {
   @@index([sessionId])
 }
 
+/// Configurações globais da LLM (singleton: id = "global").
+model Setting {
+  id                  String   @id @default("global")
+  model               String   @default("claude-opus-4-8")
+  effort              String   @default("low")
+  tone                String   @default("formal")
+  promptBase          String   @db.Text
+  topK                Int      @default(8)
+  similarityThreshold Float    @default(0)
+  updatedAt           DateTime @updatedAt
+  updatedById         String?
+}
+
 /// Log de auditoria de ações administrativas relevantes (RNF009).
 model AuditLog {
   id        String   @id @default(cuid())
