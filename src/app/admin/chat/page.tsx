@@ -3,14 +3,13 @@ import { ChatClient } from "@/components/chat-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChatPage() {
+export default async function AdminChatPage() {
   const funders = await prisma.funder.findMany({
     where: { active: true },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
 
-  // Versões de manuais ativas e indexadas, agrupadas por financiador.
   const versions = await prisma.manualVersion.findMany({
     where: { active: true, manual: { funder: { active: true } } },
     orderBy: { createdAt: "desc" },
@@ -44,10 +43,16 @@ export default async function ChatPage() {
   }
 
   return (
-    <ChatClient
-      funders={funders}
-      versionsByFunder={versionsByFunder}
-      documentsByFunder={documentsByFunder}
-    />
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Chatbot</h1>
+        <p className="text-sm text-muted">
+          Faça consultas às regras de prestação de contas, como um usuário.
+        </p>
+      </div>
+      <div className="-mx-6 flex flex-1 flex-col border-t border-border">
+        <ChatClient funders={funders} versionsByFunder={versionsByFunder} />
+      </div>
+    </div>
   );
 }

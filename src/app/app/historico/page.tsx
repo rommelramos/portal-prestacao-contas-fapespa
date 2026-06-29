@@ -41,6 +41,7 @@ export default async function HistoricoPage({
         manualVersion: {
           select: { version: true, manual: { select: { title: true } } },
         },
+        document: { select: { title: true } },
         _count: { select: { messages: true } },
       },
     }),
@@ -142,7 +143,9 @@ export default async function HistoricoPage({
                   {s.funder.name}
                   {s.manualVersion
                     ? ` · ${s.manualVersion.manual.title} v. ${s.manualVersion.version}`
-                    : ""}
+                    : s.document
+                      ? ` · ${s.document.title}`
+                      : ""}
                   {` · ${s._count.messages} mensagens`}
                 </p>
               </Link>

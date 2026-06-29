@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     include: {
       funder: true,
       manualVersion: { include: { manual: true } },
+      document: true,
       messages: { orderBy: { createdAt: "asc" } },
     },
   });
@@ -56,7 +57,9 @@ export async function POST(req: NextRequest) {
 
   const manualLabel = chat.manualVersion
     ? `${chat.manualVersion.manual.title} — versão ${chat.manualVersion.version}`
-    : "manuais e documentos cadastrados";
+    : chat.document
+      ? chat.document.title
+      : "manuais e legislações cadastrados";
 
   const conversation: ChatTurn[] = chat.messages.map((m) => ({
     role: m.role === "ASSISTANT" ? "assistant" : "user",
@@ -75,6 +78,7 @@ export async function POST(req: NextRequest) {
       funderId: chat.funderId,
       query: query || conversation[conversation.length - 1].content,
       manualVersionId: chat.manualVersionId ?? undefined,
+      documentId: chat.documentId ?? undefined,
       topK: Math.max(settings.topK, 10),
       minScore: settings.similarityThreshold,
     });

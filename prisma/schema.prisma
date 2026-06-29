@@ -116,8 +116,9 @@ model Document {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  funder Funder           @relation(fields: [funderId], references: [id], onDelete: Cascade)
-  chunks KnowledgeChunk[]
+  funder       Funder           @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  chunks       KnowledgeChunk[]
+  chatSessions ChatSession[]
 
   @@index([funderId])
   @@index([active])
@@ -151,6 +152,7 @@ model ChatSession {
   userId          String
   funderId        String
   manualVersionId String?
+  documentId      String?
   title           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -158,10 +160,12 @@ model ChatSession {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   funder        Funder         @relation(fields: [funderId], references: [id])
   manualVersion ManualVersion? @relation(fields: [manualVersionId], references: [id])
+  document      Document?      @relation(fields: [documentId], references: [id])
   messages      ChatMessage[]
 
   @@index([userId])
   @@index([funderId])
+  @@index([documentId])
   @@index([createdAt])
 }
 

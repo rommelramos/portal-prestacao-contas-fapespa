@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     sessionId?: string;
     funderId?: string;
     manualVersionId?: string;
+    documentId?: string;
     message?: string;
   };
   try {
@@ -60,15 +61,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Rótulo do manual/versão para o prompt.
-  let manualLabel = "manuais e documentos cadastrados";
+  // Rótulo do documento (manual/versão ou legislação) para o prompt.
+  let manualLabel = "manuais e legislações cadastrados";
+  let manualVersionId: string | null = null;
+  let documentId: string | null = null;
   if (body.manualVersionId) {
     const mv = await prisma.manualVersion.findUnique({
       where: { id: body.manualVersionId },
       include: { manual: true },
     });
     if (mv && mv.manual.funderId === funder.id) {
+      manualVersionId = mv.id;
       manualLabel = `${mv.manual.title} — versão ${mv.version}`;
+    }
+  } else if (body.documentId) {
+    const doc = await prisma.document.findUnique({ where: { id: body.documentId } });
+    if (doc && doc.funderId === funder.id) {
+      documentId = doc.id;
+      manualLabel = doc.title;
     }
   }
 
@@ -90,7 +100,8 @@ export async function POST(req: NextRequest) {
         data: {
           userId,
           funderId: funder.id,
-          manualVersionId: body.manualVersionId ?? null,
+          manualVersionId,
+          documentId,
           title: message.slice(0, 80),
         },
       });
@@ -109,11 +120,12 @@ export async function POST(req: NextRequest) {
 
     const settings = await getSettings();
 
-    // Recupera trechos isolados por financiador (+ versão, se houver).
+    // Recupera trechos isolados por financiador (+ escopo, se houver).
     const chunks = await retrieveChunks({
       funderId: funder.id,
       query: message,
-      manualVersionId: body.manualVersionId,
+      manualVersionId: manualVersionId ?? undefined,
+      documentId: documentId ?? undefined,
       topK: settings.topK,
       minScore: settings.similarityThreshold,
     });

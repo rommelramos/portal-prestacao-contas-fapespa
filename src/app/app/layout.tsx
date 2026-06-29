@@ -28,6 +28,12 @@ export default async function UserLayout({
         </Link>
         <nav className="flex items-center gap-4">
           <Link
+            href="/app/base"
+            className="text-sm font-medium text-muted transition hover:text-foreground"
+          >
+            Base de conhecimento
+          </Link>
+          <Link
             href="/app/historico"
             className="text-sm font-medium text-muted transition hover:text-foreground"
           >

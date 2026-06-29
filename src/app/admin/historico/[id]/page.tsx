@@ -31,11 +31,18 @@ export default async function AdminConsultaPage({
       user: { select: { name: true, email: true } },
       funder: { select: { name: true } },
       manualVersion: { select: { version: true, manual: { select: { title: true } } } },
+      document: { select: { title: true } },
       messages: { orderBy: { createdAt: "asc" } },
     },
   });
 
   if (!chat) notFound();
+
+  const scopeLabel = chat.manualVersion
+    ? `${chat.manualVersion.manual.title} v. ${chat.manualVersion.version}`
+    : chat.document
+      ? chat.document.title
+      : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -48,10 +55,7 @@ export default async function AdminConsultaPage({
         </h1>
         <p className="text-sm text-muted">
           {chat.user.name} ({chat.user.email}) · {chat.funder.name}
-          {chat.manualVersion
-            ? ` · ${chat.manualVersion.manual.title} v. ${chat.manualVersion.version}`
-            : ""}{" "}
-          · {fmt(chat.createdAt)}
+          {scopeLabel ? ` · ${scopeLabel}` : ""} · {fmt(chat.createdAt)}
         </p>
       </div>
 

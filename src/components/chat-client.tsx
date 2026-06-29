@@ -6,6 +6,7 @@ import { ParecerButton } from "@/components/parecer-button";
 
 type Funder = { id: string; name: string };
 type VersionRef = { id: string; version: string; manualTitle: string };
+type DocRef = { id: string; title: string };
 
 type Msg = {
   role: "user" | "assistant";
@@ -16,13 +17,16 @@ type Msg = {
 export function ChatClient({
   funders,
   versionsByFunder,
+  documentsByFunder = {},
 }: {
   funders: Funder[];
   versionsByFunder: Record<string, VersionRef[]>;
+  documentsByFunder?: Record<string, DocRef[]>;
 }) {
   const [started, setStarted] = useState(false);
   const [funderId, setFunderId] = useState(funders[0]?.id ?? "");
-  const [manualVersionId, setManualVersionId] = useState("");
+  // Escopo: "" = tudo · "mv:<id>" = versão de manual · "doc:<id>" = legislação
+  const [scope, setScope] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -31,8 +35,17 @@ export function ChatClient({
   const endRef = useRef<HTMLDivElement>(null);
 
   const versions = versionsByFunder[funderId] ?? [];
+  const documents = documentsByFunder[funderId] ?? [];
   const funderName = funders.find((f) => f.id === funderId)?.name ?? "";
-  const versionLabel = versions.find((v) => v.id === manualVersionId);
+
+  let scopeLabel = "todos os documentos";
+  if (scope.startsWith("mv:")) {
+    const v = versions.find((x) => x.id === scope.slice(3));
+    if (v) scopeLabel = `${v.manualTitle} v. ${v.version}`;
+  } else if (scope.startsWith("doc:")) {
+    const d = documents.find((x) => x.id === scope.slice(4));
+    if (d) scopeLabel = d.title;
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -71,7 +84,8 @@ export function ChatClient({
         body: JSON.stringify({
           sessionId,
           funderId,
-          manualVersionId: manualVersionId || undefined,
+          manualVersionId: scope.startsWith("mv:") ? scope.slice(3) : undefined,
+          documentId: scope.startsWith("doc:") ? scope.slice(4) : undefined,
           message: question,
         }),
       });
@@ -99,8 +113,8 @@ export function ChatClient({
         <div className="rounded-2xl border border-border bg-card p-8">
           <h1 className="text-xl font-semibold tracking-tight">Nova consulta</h1>
           <p className="mt-1 text-sm text-muted">
-            Escolha o financiador e a versão do manual. A IA responderá apenas
-            com base nos documentos desse financiador.
+            Escolha o financiador e, opcionalmente, um documento específico. A
+            IA responderá apenas com base nos documentos desse financiador.
           </p>
 
           {funders.length === 0 ? (
@@ -118,7 +132,7 @@ export function ChatClient({
                   value={funderId}
                   onChange={(e) => {
                     setFunderId(e.target.value);
-                    setManualVersionId("");
+                    setScope("");
                   }}
                   className={inputCls}
                 >
@@ -132,27 +146,39 @@ export function ChatClient({
 
               <div className="space-y-1.5">
                 <label htmlFor="v" className="text-sm font-medium">
-                  Versão do manual
+                  Documento (manual ou legislação)
                 </label>
                 <select
                   id="v"
-                  value={manualVersionId}
-                  onChange={(e) => setManualVersionId(e.target.value)}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
                   className={inputCls}
                 >
                   <option value="">
-                    Todos os manuais e documentos do financiador
+                    Todos os manuais e legislações do financiador
                   </option>
-                  {versions.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.manualTitle} — v. {v.version}
-                    </option>
-                  ))}
+                  {versions.length > 0 && (
+                    <optgroup label="Manuais">
+                      {versions.map((v) => (
+                        <option key={v.id} value={`mv:${v.id}`}>
+                          {v.manualTitle} — v. {v.version}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {documents.length > 0 && (
+                    <optgroup label="Legislações e documentos">
+                      {documents.map((d) => (
+                        <option key={d.id} value={`doc:${d.id}`}>
+                          {d.title}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
-                {versions.length === 0 && (
+                {versions.length === 0 && documents.length === 0 && (
                   <p className="text-xs text-muted">
-                    Este financiador ainda não tem manuais versionados; a busca
-                    usará os documentos cadastrados.
+                    Este financiador ainda não tem documentos indexados.
                   </p>
                 )}
               </div>
@@ -179,9 +205,7 @@ export function ChatClient({
           <span className="font-medium">{funderName}</span>
           <span className="text-muted">
             {" · "}
-            {versionLabel
-              ? `${versionLabel.manualTitle} v. ${versionLabel.version}`
-              : "todos os documentos"}
+            {scopeLabel}
           </span>
         </div>
         <div className="flex items-center gap-2">

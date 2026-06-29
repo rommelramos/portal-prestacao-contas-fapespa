@@ -33,11 +33,18 @@ export default async function ConsultaPage({
       manualVersion: {
         select: { version: true, manual: { select: { title: true } } },
       },
+      document: { select: { title: true } },
       messages: { orderBy: { createdAt: "asc" } },
     },
   });
 
   if (!chat) notFound();
+
+  const scopeLabel = chat.manualVersion
+    ? `${chat.manualVersion.manual.title} v. ${chat.manualVersion.version}`
+    : chat.document
+      ? chat.document.title
+      : "todos os documentos";
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
@@ -50,10 +57,7 @@ export default async function ConsultaPage({
             {chat.title ?? "Consulta"}
           </h1>
           <p className="text-sm text-muted">
-            {chat.funder.name}
-            {chat.manualVersion
-              ? ` · ${chat.manualVersion.manual.title} v. ${chat.manualVersion.version}`
-              : " · todos os documentos"}
+            {chat.funder.name} · {scopeLabel}
           </p>
         </div>
         <ParecerButton sessionId={chat.id} />

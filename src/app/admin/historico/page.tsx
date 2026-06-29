@@ -41,6 +41,7 @@ export default async function HistoricoGlobalPage({
         user: { select: { name: true } },
         funder: { select: { name: true } },
         manualVersion: { select: { version: true, manual: { select: { title: true } } } },
+        document: { select: { title: true } },
         _count: { select: { messages: true } },
       },
     }),
@@ -157,11 +158,13 @@ export default async function HistoricoGlobalPage({
                   >
                     {s.title ?? "Consulta"}
                   </Link>
-                  {s.manualVersion && (
+                  {s.manualVersion ? (
                     <div className="text-xs text-muted">
                       {s.manualVersion.manual.title} v. {s.manualVersion.version}
                     </div>
-                  )}
+                  ) : s.document ? (
+                    <div className="text-xs text-muted">{s.document.title}</div>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3 text-muted">{s.user.name}</td>
                 <td className="px-4 py-3 text-muted">{s.funder.name}</td>

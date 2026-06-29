@@ -36,6 +36,7 @@ export async function retrieveChunks(params: {
   funderId: string;
   query: string;
   manualVersionId?: string;
+  documentId?: string;
   topK?: number;
   minScore?: number;
 }): Promise<RetrievedChunk[]> {
@@ -45,17 +46,14 @@ export async function retrieveChunks(params: {
   const chunks = await prisma.knowledgeChunk.findMany({
     where: {
       funderId: params.funderId,
-      // Se uma versão de manual foi escolhida, restringe a ela — porém sempre
-      // inclui as legislações/documentos complementares do mesmo financiador
-      // (que não são versionados). Isolamento garantido pelo funderId acima.
+      // Escopo exato: uma versão de manual específica, OU uma legislação
+      // específica, OU (nenhum dos dois) toda a base do financiador.
+      // Isolamento garantido pelo funderId acima.
       ...(params.manualVersionId
-        ? {
-            OR: [
-              { manualVersionId: params.manualVersionId },
-              { documentId: { not: null } },
-            ],
-          }
-        : {}),
+        ? { manualVersionId: params.manualVersionId }
+        : params.documentId
+          ? { documentId: params.documentId }
+          : {}),
     },
     select: {
       id: true,
