@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/guards";
 import { logAudit } from "@/lib/audit";
 import { ingestPdf } from "@/lib/rag/ingest";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // Reindexa um manual/documento já enviado, reprocessando o PDF do Blob.
 // Útil após falhas de embedding (ex.: rate limit do Voyage) — sem reupload.

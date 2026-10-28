@@ -13,8 +13,15 @@ function buildAdapter(): PrismaMariaDb {
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),
-    // Pool pequeno: hospedagem compartilhada tem max_connections baixo.
-    connectionLimit: 5,
+    // O HostGator limita o usuário a max_user_connections = 25 (total). Como o
+    // Vercel roda várias instâncias serverless, cada uma precisa de um pool
+    // PEQUENO e que libere conexões ociosas RÁPIDO — senão poucas instâncias
+    // ociosas seguram todas as 25 conexões e novas conexões passam a falhar
+    // ("pool timeout ... active=0 idle=0").
+    connectionLimit: 3,
+    minimumIdle: 0, // não reservar conexões ociosas
+    idleTimeout: 15, // libera conexão ociosa após 15s (padrão era 1800 = 30min)
+    acquireTimeout: 15000, // tolera contenção momentânea ao pegar do pool
     connectTimeout: 20000,
   });
 }
@@ -30,6 +37,6 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Reaproveita o mesmo cliente/pool por instância (inclusive em produção, no
+// Vercel Fluid Compute), evitando criar múltiplos pools e multiplicar conexões.
+globalForPrisma.prisma = prisma;

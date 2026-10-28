@@ -5,7 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { uploadPdf } from "@/lib/blob";
 import { ingestPdf } from "@/lib/rag/ingest";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
 
