@@ -13,16 +13,18 @@ function buildAdapter(): PrismaMariaDb {
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),
-    // O HostGator limita o usuário a max_user_connections = 25 (total). Como o
-    // Vercel roda várias instâncias serverless, cada uma precisa de um pool
-    // PEQUENO e que libere conexões ociosas RÁPIDO — senão poucas instâncias
-    // ociosas seguram todas as 25 conexões e novas conexões passam a falhar
-    // ("pool timeout ... active=0 idle=0").
+    // Equilíbrio no pool por causa do HostGator:
+    // - max_user_connections = 25 (total, somando TODAS as instâncias) → pool
+    //   pequeno por instância.
+    // - A hospedagem tem "connection guard" que afoga IPs que abrem MUITAS
+    //   conexões novas rápido → NÃO usar idleTimeout curto (gera churn de
+    //   conexões). idleTimeout moderado reaproveita a conexão entre requisições
+    //   e ainda a libera bem antes do wait_timeout (3600s).
     connectionLimit: 3,
     minimumIdle: 0, // não reservar conexões ociosas
-    idleTimeout: 15, // libera conexão ociosa após 15s (padrão era 1800 = 30min)
-    acquireTimeout: 15000, // tolera contenção momentânea ao pegar do pool
-    connectTimeout: 20000,
+    idleTimeout: 60, // libera conexão ociosa após 60s (reuso sem churn)
+    acquireTimeout: 12000,
+    connectTimeout: 10000,
   });
 }
 
