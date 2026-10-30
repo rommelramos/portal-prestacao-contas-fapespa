@@ -141,10 +141,30 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Um documento/legislação pode atender a vários financiadores. O campo
+      // `funderIds` traz todos os selecionados; `funderId` (validado acima) é a
+      // origem/dono do arquivo. Garante que a origem esteja no conjunto.
+      const extraFunderIds = form.getAll("funderIds").map((v) => String(v));
+      const funderIds = Array.from(new Set([funderId, ...extraFunderIds])).filter(Boolean);
+      const validFunders = await prisma.funder.findMany({
+        where: { id: { in: funderIds } },
+        select: { id: true },
+      });
+      const validFunderIds = validFunders.map((f) => f.id);
+
       const { url, pathname } = await uploadPdf(file, `documentos/${funderId}`);
 
       const doc = await prisma.document.create({
-        data: { funderId, title, type, fileUrl: url, fileName: pathname },
+        data: {
+          funderId,
+          title,
+          type,
+          fileUrl: url,
+          fileName: pathname,
+          funders: {
+            create: validFunderIds.map((fid) => ({ funderId: fid })),
+          },
+        },
       });
 
       const result = await ingestPdf(bytes, {

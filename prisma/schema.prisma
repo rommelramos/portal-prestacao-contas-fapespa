@@ -28,6 +28,12 @@ enum DocumentType {
   OUTRO
 }
 
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 /// Usuários do sistema (administradores e usuários finais).
 model User {
   id           String   @id @default(cuid())
@@ -41,6 +47,9 @@ model User {
 
   chatSessions ChatSession[]
   auditLogs    AuditLog[]
+
+  suggestions         DocumentSuggestion[] @relation("SuggestionAuthor")
+  reviewedSuggestions DocumentSuggestion[] @relation("SuggestionReviewer")
 
   @@index([role])
   @@index([active])
@@ -56,10 +65,12 @@ model Funder {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  manuals      Manual[]
-  documents    Document[]
-  chatSessions ChatSession[]
-  chunks       KnowledgeChunk[]
+  manuals         Manual[]
+  documents       Document[]
+  documentFunders DocumentFunder[]
+  chatSessions    ChatSession[]
+  chunks          KnowledgeChunk[]
+  suggestions     DocumentSuggestion[]
 
   @@index([active])
   @@index([name])
@@ -103,6 +114,12 @@ model ManualVersion {
 }
 
 /// Documentos complementares (normas, resoluções, comunicados etc.).
+///
+/// Um documento/legislação pode servir a VÁRIOS financiadores (relação N:N via
+/// DocumentFunder). `funderId` é o financiador de ORIGEM (mantido para
+/// compatibilidade e como dono do arquivo no Blob); a recuperação do chatbot
+/// e as listagens usam a relação `funders` (DocumentFunder) como fonte da
+/// verdade. `funderId` é sempre um dos financiadores presentes em `funders`.
 model Document {
   id            String       @id @default(cuid())
   funderId      String
@@ -116,12 +133,30 @@ model Document {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  funder       Funder           @relation(fields: [funderId], references: [id], onDelete: Cascade)
-  chunks       KnowledgeChunk[]
-  chatSessions ChatSession[]
+  funder          Funder           @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  funders         DocumentFunder[]
+  chunks          KnowledgeChunk[]
+  chatSessions    ChatSession[]
+  suggestionFiles SuggestionFile[]
 
   @@index([funderId])
   @@index([active])
+}
+
+/// Vínculo N:N entre documentos/legislações e financiadores. Fonte da verdade
+/// para "quais financiadores este documento atende" (usado na consulta do
+/// chatbot e nas listagens por financiador).
+model DocumentFunder {
+  documentId String
+  funderId   String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  funder   Funder   @relation(fields: [funderId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, funderId])
+  @@index([funderId])
+  @@index([documentId])
 }
 
 /// Trechos indexados da base de conhecimento (RAG) por financiador/versão.
@@ -201,6 +236,57 @@ model Setting {
   similarityThreshold Float    @default(0)
   updatedAt           DateTime @updatedAt
   updatedById         String?
+}
+
+/// Sugestão de documento feita por um usuário comum (sem permissão de
+/// cadastro). O usuário indica o financiador (existente OU um nome novo),
+/// anexa um ou mais arquivos e descreve resumidamente o conteúdo. O
+/// administrador revisa e, ao aprovar, transforma cada arquivo em um Document
+/// da base, podendo criar um novo financiador com o nome sugerido ou vincular
+/// a financiadores já existentes.
+model DocumentSuggestion {
+  id                  String           @id @default(cuid())
+  userId              String
+  // Financiador existente escolhido pelo usuário (quando houver).
+  funderId            String?
+  // Nome de financiador indicado pelo usuário quando ele não existe ainda.
+  suggestedFunderName String?
+  // Resumo do que será encontrado nos documentos (obrigatório).
+  description         String           @db.Text
+  status              SuggestionStatus @default(PENDING)
+  // Observação do administrador na revisão (ex.: motivo de recusa).
+  reviewNote          String?          @db.Text
+  reviewedById        String?
+  reviewedAt          DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  user       User             @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  funder     Funder?          @relation(fields: [funderId], references: [id], onDelete: SetNull)
+  reviewedBy User?            @relation("SuggestionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  files      SuggestionFile[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([funderId])
+  @@index([createdAt])
+}
+
+/// Arquivo anexado a uma sugestão (já salvo no Blob no momento do envio).
+model SuggestionFile {
+  id           String  @id @default(cuid())
+  suggestionId String
+  fileUrl      String  @db.Text
+  fileName     String
+  size         Int     @default(0)
+  // Document gerado a partir deste arquivo após a aprovação (se houver).
+  documentId   String?
+
+  suggestion DocumentSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  document   Document?          @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([suggestionId])
+  @@index([documentId])
 }
 
 /// Log de auditoria de ações administrativas relevantes (RNF009).

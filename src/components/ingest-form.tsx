@@ -36,6 +36,8 @@ export function IngestForm({
 }) {
   const router = useRouter();
   const [funderId, setFunderId] = useState(defaultFunderId ?? funders[0]?.id ?? "");
+  // Financiadores adicionais (além do principal) para documentos N:N.
+  const [alsoFunders, setAlsoFunders] = useState<Set<string>>(new Set());
   const [manualMode, setManualMode] = useState<"novo" | "existente">("novo");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -248,6 +250,45 @@ export function IngestForm({
               ))}
             </select>
           </div>
+
+          {funders.length > 1 && (
+            <div className="space-y-1.5">
+              <span className="text-sm font-medium">
+                Também atende a outros financiadores?
+              </span>
+              <p className="text-xs text-muted">
+                Marque se este documento/legislação serve a mais de um
+                financiador — ele será consultável na base de cada um. O
+                financiador selecionado acima já está incluído.
+              </p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {funders
+                  .filter((f) => f.id !== funderId)
+                  .map((f) => (
+                    <label
+                      key={f.id}
+                      className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        name="funderIds"
+                        value={f.id}
+                        checked={alsoFunders.has(f.id)}
+                        onChange={(e) =>
+                          setAlsoFunders((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(f.id);
+                            else next.delete(f.id);
+                            return next;
+                          })
+                        }
+                      />
+                      {f.name}
+                    </label>
+                  ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 

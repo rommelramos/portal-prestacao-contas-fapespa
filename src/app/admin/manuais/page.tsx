@@ -7,6 +7,7 @@ import {
   deleteManualVersion,
   toggleDocumentActive,
   deleteDocument,
+  setDocumentFunders,
 } from "@/lib/actions/manuais";
 
 export const dynamic = "force-dynamic";
@@ -63,9 +64,13 @@ export default async function ManuaisPage({
       },
     }),
     prisma.document.findMany({
-      where: { funderId },
+      // Inclui documentos vinculados a este financiador via N:N.
+      where: { funders: { some: { funderId } } },
       orderBy: { createdAt: "desc" },
-      include: { _count: { select: { chunks: true } } },
+      include: {
+        _count: { select: { chunks: true } },
+        funders: { include: { funder: { select: { id: true, name: true } } } },
+      },
     }),
   ]);
 
@@ -229,6 +234,7 @@ export default async function ManuaisPage({
                 <tr>
                   <th className="px-4 py-2 font-medium">Título</th>
                   <th className="px-4 py-2 font-medium">Tipo</th>
+                  <th className="px-4 py-2 font-medium">Financiadores</th>
                   <th className="px-4 py-2 font-medium">Indexação</th>
                   <th className="px-4 py-2 font-medium">Arquivo</th>
                   <th className="px-4 py-2 text-right font-medium">Ações</th>
@@ -236,10 +242,55 @@ export default async function ManuaisPage({
               </thead>
               <tbody>
                 {documents.map((d) => (
-                  <tr key={d.id} className="border-b border-border last:border-0">
+                  <tr key={d.id} className="border-b border-border last:border-0 align-top">
                     <td className="px-4 py-2 font-medium">{d.title}</td>
                     <td className="px-4 py-2 text-muted">
                       {DOC_TYPE_LABEL[d.type] ?? d.type}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        {d.funders.map((df) => (
+                          <span
+                            key={df.funderId}
+                            className="rounded-full bg-accent px-2 py-0.5 text-xs text-foreground"
+                          >
+                            {df.funder.name}
+                          </span>
+                        ))}
+                      </div>
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs text-primary hover:underline">
+                          Editar financiadores
+                        </summary>
+                        <form action={setDocumentFunders} className="mt-2 space-y-1.5">
+                          <input type="hidden" name="documentId" value={d.id} />
+                          {funders.map((f) => (
+                            <label
+                              key={f.id}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <input
+                                type="checkbox"
+                                name="funderIds"
+                                value={f.id}
+                                defaultChecked={d.funders.some(
+                                  (df) => df.funderId === f.id,
+                                )}
+                              />
+                              {f.name}
+                              {!f.active && (
+                                <span className="text-muted">(inativo)</span>
+                              )}
+                            </label>
+                          ))}
+                          <button
+                            type="submit"
+                            className="mt-1 rounded-lg border border-border px-2.5 py-1 text-xs transition hover:bg-accent"
+                          >
+                            Salvar
+                          </button>
+                        </form>
+                      </details>
                     </td>
                     <td className="px-4 py-2">
                       {d.indexed ? (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { SignOutButton } from "@/components/sign-out-button";
 
 const NAV = [
@@ -8,6 +9,7 @@ const NAV = [
   { href: "/admin/chat", label: "Chatbot" },
   { href: "/admin/financiadores", label: "Financiadores" },
   { href: "/admin/manuais", label: "Manuais & Documentos" },
+  { href: "/admin/sugestoes", label: "Sugestões" },
   { href: "/admin/usuarios", label: "Usuários" },
   { href: "/admin/historico", label: "Histórico Global" },
   { href: "/admin/configuracoes", label: "Configurações da IA" },
@@ -21,6 +23,11 @@ export default async function AdminLayout({
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/app");
+
+  // Sugestões pendentes de revisão (badge no menu).
+  const pendingSuggestions = await prisma.documentSuggestion.count({
+    where: { status: "PENDING" },
+  });
 
   return (
     <div className="flex min-h-screen flex-1">
@@ -41,9 +48,14 @@ export default async function AdminLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition hover:bg-accent"
+              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-foreground transition hover:bg-accent"
             >
-              {item.label}
+              <span>{item.label}</span>
+              {item.href === "/admin/sugestoes" && pendingSuggestions > 0 && (
+                <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
+                  {pendingSuggestions}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

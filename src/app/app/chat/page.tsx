@@ -33,14 +33,27 @@ export default async function ChatPage() {
     });
   }
 
-  const docs = await prisma.document.findMany({
-    where: { active: true, indexed: true, funder: { active: true } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, funderId: true },
+  // Documentos/legislações podem atender a vários financiadores (N:N): lista
+  // cada documento ativo/indexado sob TODOS os financiadores a que pertence.
+  const docLinks = await prisma.documentFunder.findMany({
+    where: {
+      funder: { active: true },
+      document: { active: true, indexed: true },
+    },
+    select: {
+      funderId: true,
+      document: { select: { id: true, title: true, createdAt: true } },
+    },
   });
   const documentsByFunder: Record<string, { id: string; title: string }[]> = {};
-  for (const d of docs) {
-    (documentsByFunder[d.funderId] ??= []).push({ id: d.id, title: d.title });
+  for (const l of docLinks) {
+    (documentsByFunder[l.funderId] ??= []).push({
+      id: l.document.id,
+      title: l.document.title,
+    });
+  }
+  for (const list of Object.values(documentsByFunder)) {
+    list.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
   }
 
   return (

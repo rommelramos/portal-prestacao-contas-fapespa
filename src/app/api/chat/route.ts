@@ -75,10 +75,15 @@ export async function POST(req: NextRequest) {
       manualLabel = `${mv.manual.title} — versão ${mv.version}`;
     }
   } else if (body.documentId) {
-    const doc = await prisma.document.findUnique({ where: { id: body.documentId } });
-    if (doc && doc.funderId === funder.id) {
-      documentId = doc.id;
-      manualLabel = doc.title;
+    // Documento pode servir a vários financiadores: valida o vínculo N:N em vez
+    // do funderId de origem.
+    const link = await prisma.documentFunder.findUnique({
+      where: { documentId_funderId: { documentId: body.documentId, funderId: funder.id } },
+      include: { document: true },
+    });
+    if (link) {
+      documentId = link.document.id;
+      manualLabel = link.document.title;
     }
   }
 

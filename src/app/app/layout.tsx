@@ -34,6 +34,12 @@ export default async function UserLayout({
             Base de conhecimento
           </Link>
           <Link
+            href="/app/sugestoes"
+            className="text-sm font-medium text-muted transition hover:text-foreground"
+          >
+            Sugerir documento
+          </Link>
+          <Link
             href="/app/historico"
             className="text-sm font-medium text-muted transition hover:text-foreground"
           >

@@ -14,7 +14,7 @@ export type ExistingItem = {
 export async function getExistingByFunder(): Promise<
   Record<string, ExistingItem[]>
 > {
-  const [versions, documents] = await Promise.all([
+  const [versions, documentLinks] = await Promise.all([
     prisma.manualVersion.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -24,13 +24,19 @@ export async function getExistingByFunder(): Promise<
         _count: { select: { chunks: true } },
       },
     }),
-    prisma.document.findMany({
+    // Documentos podem servir a vários financiadores (N:N): lista cada um sob
+    // todos os financiadores a que está vinculado.
+    prisma.documentFunder.findMany({
       orderBy: { createdAt: "desc" },
       select: {
-        title: true,
-        indexed: true,
         funderId: true,
-        _count: { select: { chunks: true } },
+        document: {
+          select: {
+            title: true,
+            indexed: true,
+            _count: { select: { chunks: true } },
+          },
+        },
       },
     }),
   ]);
@@ -44,12 +50,12 @@ export async function getExistingByFunder(): Promise<
       chunks: v._count.chunks,
     });
   }
-  for (const d of documents) {
-    (map[d.funderId] ??= []).push({
+  for (const l of documentLinks) {
+    (map[l.funderId] ??= []).push({
       kind: "documento",
-      label: d.title,
-      indexed: d.indexed,
-      chunks: d._count.chunks,
+      label: l.document.title,
+      indexed: l.document.indexed,
+      chunks: l.document._count.chunks,
     });
   }
   return map;

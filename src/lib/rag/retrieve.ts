@@ -43,18 +43,37 @@ export async function retrieveChunks(params: {
   const topK = params.topK ?? 8;
   const minScore = params.minScore ?? 0;
 
+  // Monta o filtro conforme o escopo pedido:
+  // - versão de manual específica → só os trechos daquela versão;
+  // - legislação específica → só os trechos daquele documento;
+  // - toda a base do financiador → trechos dos manuais DESTE financiador +
+  //   trechos de TODOS os documentos vinculados a ele (relação N:N
+  //   DocumentFunder). Um documento pode servir a vários financiadores, então
+  //   seus trechos aparecem na base de cada um deles.
+  // Em qualquer caso o isolamento é garantido: nunca mistura financiadores.
+  let where: Record<string, unknown>;
+  if (params.manualVersionId) {
+    where = { manualVersionId: params.manualVersionId };
+  } else if (params.documentId) {
+    where = { documentId: params.documentId };
+  } else {
+    const links = await prisma.documentFunder.findMany({
+      where: { funderId: params.funderId },
+      select: { documentId: true },
+    });
+    const docIds = links.map((l) => l.documentId);
+    where = {
+      OR: [
+        // Trechos de manuais deste financiador.
+        { funderId: params.funderId, manualVersionId: { not: null } },
+        // Trechos de documentos/legislações vinculados a este financiador.
+        { documentId: { in: docIds.length > 0 ? docIds : ["__none__"] } },
+      ],
+    };
+  }
+
   const chunks = await prisma.knowledgeChunk.findMany({
-    where: {
-      funderId: params.funderId,
-      // Escopo exato: uma versão de manual específica, OU uma legislação
-      // específica, OU (nenhum dos dois) toda a base do financiador.
-      // Isolamento garantido pelo funderId acima.
-      ...(params.manualVersionId
-        ? { manualVersionId: params.manualVersionId }
-        : params.documentId
-          ? { documentId: params.documentId }
-          : {}),
-    },
+    where,
     select: {
       id: true,
       content: true,

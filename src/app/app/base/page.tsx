@@ -54,7 +54,8 @@ export default async function BaseConhecimentoPage({
       },
     }),
     prisma.document.findMany({
-      where: { funderId, active: true, indexed: true },
+      // Inclui documentos que atendem a este financiador via vínculo N:N.
+      where: { active: true, indexed: true, funders: { some: { funderId } } },
       orderBy: { createdAt: "desc" },
     }),
   ]);
